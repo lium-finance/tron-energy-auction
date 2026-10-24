@@ -1,0 +1,24 @@
+node_modules/
+dist/
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+contracts/out/
+contracts/cache/
+contracts/broadcast/
+contracts/build/
+coverage/
+.worktrees/
+public/
+
+# identify the supplier; only wallets.example.json is committed
+docs/verification/wallets*.json
+!docs/verification/wallets.example.json
+# nile-probe's raw journal; the human writes docs/verification/nile-lock.md from it
+docs/verification/nile-lock.jsonl
+
+# write-record.ts's temporary directories (.<date>.tmp-*), if a crash leaves one. A record replaced with --force is
+# kept as <date>.replaced-<UTC timestamp>, which is not ignored: commit it as superseded or delete it.
+docs/decisions/.*

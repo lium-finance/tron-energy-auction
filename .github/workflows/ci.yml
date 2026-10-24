@@ -1,0 +1,42 @@
+name: ci
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16.15
+        env:
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: index_test
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgres://postgres:test@localhost:5432/index_test
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci
+      - name: "fetch guard: no collector calls fetch directly; every request goes through src/collectors/http.ts"
+        run: |
+          if grep -rnE '(^|[^.[:alnum:]_])fetch[[:space:]]*\(|globalThis\.fetch|[=:?,(][[:space:]]*fetch([^[:alnum:]_]|$)' src/collectors --exclude=http.ts; then
+            echo "a collector calls fetch directly; use fetchQuote (src/collectors/http.ts)"
+            exit 1
+          fi
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+      - run: test -f dist/index/main.js
+      - name: built entry point loads (an empty env must stop at the config check, exit 2)
+        run: |
+          set +e
+          env -i PATH="$PATH" node dist/index/main.js
+          code=$?
+          set -e
+          test "$code" -eq 2 || { echo "expected exit 2 from the config check, got $code"; exit 1; }

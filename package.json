@@ -1,0 +1,58 @@
+{
+  "name": "tron-energy-index",
+  "version": "0.1.0",
+  "description": "An hourly reference price for renting Tron energy (the median of live venue quotes for 20,000,000 units for one hour), with scripts that check the four facts an energy auction would need.",
+  "private": true,
+  "license": "MIT",
+  "author": "LIUM Finance",
+  "homepage": "https://github.com/lium-finance/tron-energy-auction#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lium-finance/tron-energy-auction"
+  },
+  "bugs": {
+    "url": "https://github.com/lium-finance/tron-energy-auction/issues"
+  },
+  "keywords": [
+    "tron",
+    "trx",
+    "energy",
+    "energy-rental",
+    "price-index",
+    "reference-price",
+    "staking",
+    "postgres"
+  ],
+  "type": "module",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "tsc -p tsconfig.build.json",
+    "check": "npm run typecheck && npm test",
+    "migrate": "tsx src/index/migrate.ts",
+    "start": "node dist/index/main.js",
+    "dev": "tsx src/index/main.ts",
+    "collect-once": "tsx src/scripts/collect-once.ts",
+    "smoke": "tsx src/scripts/smoke.ts",
+    "verify-supplier": "tsx src/scripts/verify-supplier.ts",
+    "verify-utilisation": "tsx src/scripts/verify-utilisation.ts",
+    "build-top100": "tsx src/scripts/build-top100.ts",
+    "verify-band": "tsx src/scripts/verify-band.ts",
+    "verify-clearability": "tsx src/scripts/verify-clearability.ts",
+    "export-decision": "tsx src/scripts/export-decision.ts",
+    "nile-probe": "tsx src/scripts/nile-probe.ts"
+  },
+  "dependencies": {
+    "postgres": "3.4.9",
+    "tronweb": "6.5.1"
+  },
+  "devDependencies": {
+    "@types/node": "24.13.5",
+    "tsx": "4.23.13",
+    "typescript": "5.9.3",
+    "vitest": "4.1.11"
+  }
+}

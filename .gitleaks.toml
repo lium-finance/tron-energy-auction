@@ -1,0 +1,7 @@
+# Test files hold fake keys and URLs on purpose: they check that redaction removes them.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "fake secrets in redaction and script tests"
+paths = ['''^test/''']

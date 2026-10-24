@@ -1,0 +1,9 @@
+{
+  "supplier": ["TExampLeSupp1ierWa11et111111111111", "TExampLeSupp1ierWa11et222222222222"],
+  "top100": {
+    "source": "replace with the exact request the list came from (see docs/verification/top100-source.md)",
+    "readAt": "2026-10-28T09:00:00Z",
+    "shareOfTotalEnergyWeight": 0.0,
+    "wallets": ["TExampLeTopStakerWa11et11111111111", "TExampLeTopStakerWa11et22222222222"]
+  }
+}
