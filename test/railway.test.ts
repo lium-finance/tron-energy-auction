@@ -3,6 +3,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import { VENUES } from "../src/collectors/index.js";
 import { DB_END_TIMEOUT_S } from "../src/index/db.js";
 import { SHUTDOWN_WAIT_MS } from "../src/index/schedule.js";
 import { SERVER_CLOSE_FORCE_MS, startServer } from "../src/index/serve.js";
@@ -81,13 +82,15 @@ describe("Node 24 on Railway", () => {
 });
 
 describe(".env.example", () => {
-  it("lists every variable loadConfig reads", () => {
+  it("lists every variable loadConfig reads, including each venue's publish gate", () => {
     const names = readFileSync(join(root, ".env.example"), "utf8")
       .split("\n")
       .filter((l) => /^[A-Z_]+=/.test(l))
       .map((l) => l.slice(0, l.indexOf("=")));
     const read = [...readFileSync(join(root, "src/index/config.ts"), "utf8").matchAll(/(?:get|need)\("([A-Z_]+)"\)/g)].map((m) => m[1]);
     expect(new Set(read)).toEqual(new Set(["DATABASE_URL", "TRONGRID_API_KEY", "PUBLISH", "PORT", "ALERT_WEBHOOK_URL", "HEALTHCHECK_PING_URL", "PUBLIC_DIR", "NETTS_API_KEY", "VERIFY_WALLETS_FILE", "VERIFY_RPS"]));
-    expect(names.sort()).toEqual([...read].sort());
+    const gates = VENUES.flatMap((v) => (v.publishGate ? [v.publishGate] : []));
+    expect(gates).toEqual(["PUBLISH_ITRX", "PUBLISH_TRONENERGY_MARKET", "PUBLISH_TOKENGOODIES"]);
+    expect(names.sort()).toEqual([...read, ...gates].sort());
   });
 });

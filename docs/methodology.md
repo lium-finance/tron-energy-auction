@@ -18,7 +18,7 @@ in `quotes`, failures included, with a status and a reason:
 | Status | Meaning |
 | --- | --- |
 | `ok` | A parsed quote. |
-| `no-depth` | The venue answered but cannot fill the requested size. |
+| `no-depth` | The venue answered but cannot fill the requested size. An empty order book is `no-depth` with no price. |
 | `depth-unknown` | The venue publishes a price but no size it can fill (a package catalog or a page tier). It is shown, never counted. |
 | `rejected` | The price fell outside the sanity band (below 1 sun, or above the hour's energy fee from the chain). The raw value is kept. |
 | `failed` | Timeout, HTTP error, rate limit, or a response that no longer matches the parser. The reason says which. |
@@ -51,11 +51,22 @@ hour stays missing: prices are never backfilled or extrapolated.
 
 ### Why most hours print `no_index` today
 
-At the time of writing only TronSave answers a size for the 1-hour instrument. TronBid's public catalog tops out at
-about 1,048,000 units, GetBlock's page tiers at 540,000, and NetTS needs a key and caps an order at 3,000,000
-(`docs/verification/venue-apis.md`). JustLend's minimum rental is three hours, so it cannot quote the instrument; its
-daily rate is published as a separate series. The rule is kept as written rather than lowered to fit the venues: the
-feed publishes the full per-venue ladder with the `no_index` flag, so the gap is visible.
+At the time of writing only TronSave answers a size for the 1-hour instrument among the published venues. TronBid's
+public catalog tops out at about 1,048,000 units, GetBlock's page tiers at 540,000, and NetTS needs a key and caps an
+order at 3,000,000 (`docs/verification/venue-apis.md`). TronZap's keyless rate is the price of one 65,000-unit
+transfer and TronPulse's is its 1-hour minimum buy price, neither with depth, so both are `depth-unknown`
+(`docs/verification/venue-apis-2026-10-28.md`). JustLend's minimum rental is three hours, so it cannot quote the
+instrument; its daily rate is published as a separate series. The rule is kept as written rather than lowered to fit
+the venues: the feed publishes the full per-venue ladder with the `no_index` flag, so the gap is visible.
+
+### Collect-only venues
+
+iTRX, TRON Energy Market and TokenGoodies publish a price with depth (platform availability, a pool ladder, an open
+buy-order book), but their terms restrict automated reads or reproducing their data. They are asked every hour and
+their quotes are stored, but the print is computed without them, `latest.json` and the page leave them out, and the
+band and clearability facts ignore them, until the venue's `PUBLISH_ITRX`, `PUBLISH_TRONENERGY_MARKET` or
+`PUBLISH_TOKENGOODIES` is `on` (`src/index/gate.ts`). Turning one on changes which venues the print can count from
+that hour on; stored prints are not recomputed.
 
 ## What is published
 
@@ -64,7 +75,7 @@ partial file), and served read-only by `src/index/serve.ts`:
 
 | Path | Contents |
 | --- | --- |
-| `/latest.json` | The latest print, every quote of that hour with its status and reason, the 1-day series, the chain fields, and the method version. |
+| `/latest.json` | The latest print, every quote of that hour (except collect-only venues') with its status and reason, the 1-day series, the chain fields, and the method version. |
 | `/history.json` | Every print. |
 | `/` or `/index.html` | A page rendered from the same data: the print, the venue ladder, the method in five sentences, and the longer-term series. |
 | `/healthz` | `ok` while the process is up. |
