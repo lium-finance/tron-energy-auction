@@ -22,6 +22,10 @@ describe("collectOnlyVenues", () => {
       expect(() => collectOnlyVenues({ PUBLISH_Y: bad }, venues)).toThrow(new ConfigError("PUBLISH_Y must be on or off"));
     }
   });
+  it("gates iTRX, TRON Energy Market and TokenGoodies by default, and nothing else", () => {
+    expect(collectOnlyVenues({})).toEqual(new Set(["itrx", "tronenergy-market", "tokengoodies"]));
+    expect(allGatedVenues()).toEqual(new Set(["itrx", "tronenergy-market", "tokengoodies"]));
+  });
 });
 
 describe("publishable", () => {

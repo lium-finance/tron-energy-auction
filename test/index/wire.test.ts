@@ -25,7 +25,7 @@ describe("buildDeps", () => {
     expect(d.publish).toBeUndefined();
     expect(typeof d.ping).toBe("function");
     expect(lines).toEqual([]);
-    expect(d.venues.map((v) => v.venue)).toEqual(["tronsave", "tronbid", "getblock", "netts", "justlend", "justlend-net"]);
+    expect(d.venues.map((v) => v.venue)).toEqual(["tronsave", "tronbid", "getblock", "netts", "justlend", "justlend-net", "itrx", "tronenergy-market", "tronzap", "tronpulse", "tokengoodies"]);
   });
   it("wires publish when PUBLISH is on, and the ping only when the caller is the service", () => {
     const d = buildDeps({ ...cfg, publish: true, healthcheckPingUrl: "https://hc-ping.com/x" }, {} as never, {}, () => {}, { ping: true });

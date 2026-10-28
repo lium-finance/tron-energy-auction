@@ -5,7 +5,7 @@ const base = { DATABASE_URL: "postgres://u:p@h/db", TRONGRID_API_KEY: "k", PUBLI
 
 describe("loadConfig", () => {
   it("reads the env with defaults for the optional values", () => {
-    expect(loadConfig(base)).toEqual({ databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: null, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null, collectOnly: new Set() });
+    expect(loadConfig(base)).toEqual({ databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: null, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null, collectOnly: new Set(["itrx", "tronenergy-market", "tokengoodies"]) });
   });
   it("requires HEALTHCHECK_PING_URL when PUBLISH is on", () => {
     expect(() => loadConfig({ ...base, PUBLISH: "on" })).toThrow("HEALTHCHECK_PING_URL is required when PUBLISH=on");
@@ -18,9 +18,14 @@ describe("loadConfig", () => {
   });
   it("trims every value it reads and treats a blank value as unset", () => {
     const c = loadConfig({ DATABASE_URL: "  postgres://u:p@h/db \n", TRONGRID_API_KEY: " k ", PUBLISH: " on ", HEALTHCHECK_PING_URL: " https://hc-ping.com/x ", ALERT_WEBHOOK_URL: "  ", PUBLIC_DIR: " out ", PORT: " 8080 ", NETTS_API_KEY: " n ", VERIFY_WALLETS_FILE: " docs/verification/wallets.json ", VERIFY_RPS: " 3 " });
-    expect(c).toEqual({ databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: true, alertWebhookUrl: null, healthcheckPingUrl: "https://hc-ping.com/x", publicDir: "out", port: 8080, nettsApiKey: "n", verifyWalletsFile: "docs/verification/wallets.json", verifyRps: "3", collectOnly: new Set() });
+    expect(c).toEqual({ databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: true, alertWebhookUrl: null, healthcheckPingUrl: "https://hc-ping.com/x", publicDir: "out", port: 8080, nettsApiKey: "n", verifyWalletsFile: "docs/verification/wallets.json", verifyRps: "3", collectOnly: new Set(["itrx", "tronenergy-market", "tokengoodies"]) });
     expect(loadConfig({ ...base, PUBLISH: "  ", PORT: "" }).publish).toBe(false);
     expect(() => loadConfig({ DATABASE_URL: "  ", TRONGRID_API_KEY: "k" })).toThrow("DATABASE_URL is required");
+  });
+  it("keeps each gated venue collect-only unless its PUBLISH_<VENUE> is on, and accepts only on or off", () => {
+    expect(loadConfig({ ...base, PUBLISH_ITRX: "on", PUBLISH_TOKENGOODIES: "off" }).collectOnly).toEqual(new Set(["tronenergy-market", "tokengoodies"]));
+    expect(loadConfig({ ...base, PUBLISH_ITRX: "on", PUBLISH_TRONENERGY_MARKET: "on", PUBLISH_TOKENGOODIES: "on" }).collectOnly).toEqual(new Set());
+    expect(() => loadConfig({ ...base, PUBLISH_TRONENERGY_MARKET: "true" })).toThrow("PUBLISH_TRONENERGY_MARKET must be on or off");
   });
   it("accepts only on or off for PUBLISH", () => {
     expect(loadConfig({ ...base, PUBLISH: "off" }).publish).toBe(false);
