@@ -29,8 +29,8 @@ describe("tronzap", () => {
     expect(calls(f)).toHaveLength(1);
     expect(calls(f)[0]![1].method).toBe("GET");
   });
-  it("has no publish gate", () => {
-    expect(tronzap.publishGate).toBeUndefined();
+  it("declares the PUBLISH_TRONZAP gate", () => {
+    expect(tronzap.publishGate).toBe("PUBLISH_TRONZAP");
   });
   it.each([
     ["price_65k missing", (o: Record<string, unknown>) => { delete o.price_65k; }, "schema: price_65k missing or not a positive number"],

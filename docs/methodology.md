@@ -53,19 +53,19 @@ hour stays missing: prices are never backfilled or extrapolated.
 
 At the time of writing only TronSave answers a size for the 1-hour instrument among the published venues. TronBid's
 public catalog tops out at about 1,048,000 units, GetBlock's page tiers at 540,000, and NetTS needs a key and caps an
-order at 3,000,000 (`docs/verification/venue-apis.md`). TronZap's keyless rate is the price of one 65,000-unit
-transfer and TronPulse's is its 1-hour minimum buy price, neither with depth, so both are `depth-unknown`
-(`docs/verification/venue-apis-2026-10-28.md`). JustLend's minimum rental is three hours, so it cannot quote the
+order at 3,000,000 (`docs/verification/venue-apis.md`). TronPulse's keyless rate is its 1-hour minimum buy price,
+without depth, so it is `depth-unknown` (`docs/verification/venue-apis-2026-10-28.md`). JustLend's minimum rental is three hours, so it cannot quote the
 instrument; its daily rate is published as a separate series. The rule is kept as written rather than lowered to fit
 the venues: the feed publishes the full per-venue ladder with the `no_index` flag, so the gap is visible.
 
 ### Collect-only venues
 
-iTRX, TRON Energy Market and TokenGoodies publish a price with depth (platform availability, a pool ladder, an open
-buy-order book), but their terms restrict automated reads or reproducing their data. They are asked every hour and
+iTRX, TRON Energy Market and TokenGoodies answer a price with depth (platform availability, a pool ladder, an open
+buy-order book), and TronZap a `depth-unknown` price for one 65,000-unit transfer, but their terms restrict automated
+reads or reproducing their data. They are asked every hour and
 their quotes are stored, but the print is computed without them, `latest.json` and the page leave them out, and the
-band and clearability facts ignore them, until the venue's `PUBLISH_ITRX`, `PUBLISH_TRONENERGY_MARKET` or
-`PUBLISH_TOKENGOODIES` is `on` (`src/index/gate.ts`). Turning one on changes which venues the print can count from
+band and clearability facts ignore them, until the venue's `PUBLISH_ITRX`, `PUBLISH_TRONENERGY_MARKET`,
+`PUBLISH_TRONZAP` or `PUBLISH_TOKENGOODIES` is `on` (`src/index/gate.ts`). Turning one on changes which venues the print can count from
 that hour on; stored prints are not recomputed.
 
 ## What is published

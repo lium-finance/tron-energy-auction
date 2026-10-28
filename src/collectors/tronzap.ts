@@ -3,6 +3,8 @@ import type { Parsed, VenueAdapter } from "./adapter.js";
 
 const RATES = "https://tronzap.com/api/rates";
 
+export const TRONZAP_PUBLISH_GATE = "PUBLISH_TRONZAP";
+
 function positive(o: Record<string, unknown>, name: string): number {
   const v = o[name];
   if (typeof v !== "number" || !Number.isFinite(v) || v <= 0) throw new Error(`${name} missing or not a positive number`);
@@ -15,9 +17,14 @@ function positive(o: Record<string, unknown>, name: string): number {
  * one rental term, 1 hour ("Energy arrives within a minute and lasts 1 hour", tronzap.com, read 2026-10-28; the API
  * docs say only 1 hour is supported). The size quote (`POST api.tronzap.com/v1/calculate`) needs a Bearer key and an
  * HMAC signature, and nothing keyless reports depth, so the row is the 65k headline price as `depth-unknown`.
+ *
+ * Collect-only: TronZap's terms (tronzap.com/terms, last updated 02.03.2025) say "You may not copy, reproduce, or
+ * distribute any content without prior permission", so the rows are stored and never counted or published until
+ * PUBLISH_TRONZAP=on (src/index/gate.ts).
  */
 export const tronzap: VenueAdapter = {
   venue: "tronzap",
+  publishGate: TRONZAP_PUBLISH_GATE,
   requests: [{ size: INSTRUMENT.units, term: "1h" }],
   request() {
     return { url: RATES, init: { method: "GET", headers: { accept: "application/json", "user-agent": "Mozilla/5.0 tron-energy-index" } } };

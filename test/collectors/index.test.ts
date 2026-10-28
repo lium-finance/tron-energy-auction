@@ -7,7 +7,7 @@ describe("VENUES", () => {
   });
   it("gates exactly the venues whose terms restrict reproducing their data", () => {
     expect(VENUES.filter((v) => v.publishGate).map((v) => [v.venue, v.publishGate])).toEqual([
-      ["itrx", "PUBLISH_ITRX"], ["tronenergy-market", "PUBLISH_TRONENERGY_MARKET"], ["tokengoodies", "PUBLISH_TOKENGOODIES"],
+      ["itrx", "PUBLISH_ITRX"], ["tronenergy-market", "PUBLISH_TRONENERGY_MARKET"], ["tronzap", "PUBLISH_TRONZAP"], ["tokengoodies", "PUBLISH_TOKENGOODIES"],
     ]);
   });
 });

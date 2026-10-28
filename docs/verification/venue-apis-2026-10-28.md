@@ -9,7 +9,7 @@ Every recorded body is a fixture in `test/fixtures`, verbatim unless marked cons
 | --- | --- | --- | --- | --- |
 | iTRX | `GET https://itrx.io/api/v1/frontend/index-data`, no `API-KEY` | 200 JSON (the research sample, 04:13:15Z; not re-requested) | `itrx-index-data.json` | `ok` when `platform_avail_energy` covers 20M, else `no-depth` (12,387,503 at the sample) |
 | TRON Energy Market | `GET https://api.tronenergy.market/info` (04:26:38Z) | 200 JSON, 5,779 bytes | `tronenergy-market-info.json` | `ok` (the 30 sun/day level alone held 86,274,460 units) |
-| TronZap | `GET https://tronzap.com/api/rates` (04:26:41Z) | 200 JSON, 18,952 bytes | `tronzap-rates.json` | `depth-unknown` |
+| TronZap | `GET https://tronzap.com/api/rates` (04:26:41Z) | 200 JSON, 18,952 bytes | `tronzap-rates.json` | `depth-unknown` (collect-only) |
 | TronPulse | `GET https://tronpulse.io/api/energypool/market_settings` (04:26:44Z) | 200 JSON, 3,323 bytes | `tronpulse-market-settings.json` | `depth-unknown` |
 | TronPulse | `GET .../api/energypool/order/market_orders` and `GET .../api/energypool/pool/liquidity` (04:26:47Z to 04:26:51Z) | 503 HTML, 237 bytes each | `tronpulse-market-orders-503.html` | not parsed: no success body exists to test against |
 | TokenGoodies | `POST https://www.tokengoodies.com/tronresourceexchange/exchange` `{"action":"utils","type":"list_details","rval":1,"sortkey":"payoutamountinsun","limit":5,"offset":0}`, no Origin or Referer (04:26:51Z) | 200 `{"success":false,...,"errormessage":"INVALID_REQUEST",...}` | `tokengoodies-invalid-request.json` | `failed` (the error page served with 200) |
@@ -33,9 +33,11 @@ The price is never below the 1h row's `price.openEnergy[].minPoolPrice` (30 at r
 duration. Terms (site modal): "You will not use any automated means to access our systems." Collect-only.
 
 **TronZap.** `price_65k` 2.45 TRX for one 65,000-unit transfer for 1 hour: 37.69 sun per unit. The size quote needs a
-Bearer key and an HMAC signature. The body also carries the venue's payment addresses and QR codes. Terms carry a
-general clause ("You may not copy, reproduce, or distribute any content without prior permission"); no scraping ban
-was found. Published as `depth-unknown`.
+Bearer key and an HMAC signature. The body also carries the venue's payment addresses and QR codes. Terms
+(tronzap.com/terms, "Last updated: 02.03.2025", re-read 2026-10-28 04:43Z), Intellectual Property: "All content on
+TronZap.com, including text, graphics, and logos, is owned by TronZap project unless otherwise stated. You may not
+copy, reproduce, or distribute any content without prior permission." No scraping ban as such, but publishing its rate
+is reproducing its content without permission. Collect-only (`PUBLISH_TRONZAP`).
 
 **TronPulse.** The `energy_duration` row with `unit` "hour", `value` 1, `block_duration` 1200 has
 `energy_min_price` 55: sun per unit for the 1-hour rental, a minimum buy price, not a fill. No scraping clause found

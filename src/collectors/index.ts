@@ -12,7 +12,7 @@ import { tronzap } from "./tronzap.js";
 
 /**
  * Every venue the hour job asks, in this order. The hourly print reads only 1h rows with 20M depth.
- * Venues with a `publishGate` (iTRX, TRON Energy Market, TokenGoodies) are collected and stored but never counted or
+ * Venues with a `publishGate` (iTRX, TRON Energy Market, TronZap, TokenGoodies) are collected and stored but never counted or
  * published until their PUBLISH_<VENUE> is on (src/index/gate.ts).
  */
 export const VENUES: readonly VenueAdapter[] = [tronsave, tronbid, getblock, netts, justlend, justlendNet, itrx, tronenergyMarket, tronzap, tronpulse, tokengoodies];
