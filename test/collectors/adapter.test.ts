@@ -101,3 +101,25 @@ describe("the published source", () => {
     expect(quotes[0]!.source).toBe("stub");
   });
 });
+
+describe("a parse with nothing to price", () => {
+  const one = (parse: VenueAdapter["parse"]): VenueAdapter => stub({ requests: [{ size: 20_000_000, term: "1h" }], parse });
+
+  it("is a no-depth row with no price, the depth it reported and its note as the reason, and keeps its body", async () => {
+    const { quotes, payloads } = await collectAll(one(() => ({ raw: null, depth: 0, note: "open book is empty" })), ctx(answer('{"orders":[]}')));
+    expect(quotes[0]).toMatchObject({ status: "no-depth", sunPerUnit: null, depth: 0, reason: "open book is empty", payloadHash: sha256('{"orders":[]}') });
+    expect(payloads).toHaveLength(1);
+  });
+
+  it("says what it can fill when there is no note", async () => {
+    const { quotes } = await collectAll(one(() => ({ raw: null, depth: 1_000 })), ctx(answer("{}")));
+    expect(quotes[0]).toMatchObject({ status: "no-depth", sunPerUnit: null, depth: 1_000, reason: "venue can fill 1000 of 20000000 units" });
+  });
+
+  it("fails when it reports no shortfall: no price with unknown or full depth is a parser bug, not a quote", async () => {
+    for (const depth of [null, 20_000_000]) {
+      const { quotes } = await collectAll(one(() => ({ raw: null, depth })), ctx(answer("{}")));
+      expect(quotes[0]).toMatchObject({ status: "failed", sunPerUnit: null, depth: null, reason: "schema: no price and no depth shortfall to report" });
+    }
+  });
+});

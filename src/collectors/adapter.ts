@@ -25,7 +25,8 @@ export interface CollectContext {
 
 /** What a venue adapter returns from a parsed body: a raw price and how much the venue can fill. */
 export interface Parsed {
-  raw: RawPrice;
+  /** The price; null when the venue answered with nothing to price (an empty order book). Then `depth` is what it can fill (0) and the row is `no-depth` with `note` as its reason. */
+  raw: RawPrice | null;
   /** Units the venue can fill at that price; null when the API does not say. */
   depth: number | null;
   /** What was priced, when it is not the size asked for; the reason on a `depth-unknown` row (redacted and capped like any reason). */
@@ -40,6 +41,12 @@ export interface VenueAdapter {
   request(size: number, term: Term, ctx: CollectContext): { url: string; init: RequestInit } | { skip: string } | null;
   /** Parse the body (JSON unless `fetchOptions.expect` says otherwise); throw with a short message on drift. */
   parse(body: string, size: number, term: Term): Parsed;
+  /**
+   * The environment variable that must be `on` before this venue's rows count toward a print or are published
+   * (src/index/gate.ts). For venues whose terms restrict automated reads or reproducing their data: they are collected
+   * and stored, never published, until the gate is switched on. Absent: the venue is published like any other.
+   */
+  publishGate?: string;
   /** Per-venue overrides merged over `ctx.fetchOptions` for this venue's requests only (for example `{ expect: "html" }`). Timing and the fetch implementation stay the context's. */
   fetchOptions?: Pick<FetchOptions, "expect" | "maxBytes">;
 }
@@ -144,6 +151,12 @@ async function collectOne(a: VenueAdapter, size: number, term: Term, ctx: Collec
     return { quote: { ...b, sunPerUnit: null, depth: null, status: "failed", reason: `schema: ${errorMessage(e)}`, payloadHash: res.payloadHash }, body };
   }
   const depth = parsed.depth === null ? null : Math.min(parsed.depth, size);
+  if (parsed.raw === null) {
+    if (depth === null || depth >= size) {
+      return { quote: { ...b, sunPerUnit: null, depth: null, status: "failed", reason: "schema: no price and no depth shortfall to report", payloadHash: res.payloadHash }, body };
+    }
+    return { quote: { ...b, sunPerUnit: null, depth, status: "no-depth", reason: parsed.note ?? `venue can fill ${depth} of ${size} units`, payloadHash: res.payloadHash }, body };
+  }
   const n = normalise(parsed.raw, ctx.energyFeeSun);
   if (!n.ok) {
     return { quote: { ...b, sunPerUnit: null, depth, status: "rejected", reason: n.reason, payloadHash: res.payloadHash }, body };
