@@ -5,6 +5,7 @@ import { print } from "../core/print.js";
 import type { Print, Quote } from "../core/types.js";
 import { hasPrint, insertChain, insertPayloads, insertPrint, insertQuotes, lastEnergyFeeRow, lastPrint, printForHour, quotesForHour, type Sql } from "./db.js";
 import { errorMessage } from "../core/errors.js";
+import { allGatedVenues, publishable } from "./gate.js";
 
 export interface HourDeps {
   sql: Sql;
@@ -33,8 +34,16 @@ export interface HourDeps {
   /** Removes configured secret values only (redactConfiguredSecrets); quote sources then keep the endpoint path. Absent: sources keep only the host. */
   redactValues?: (s: string) => string;
   env: NodeJS.ProcessEnv;
+  /**
+   * Venues collected and stored but never counted in the print or published (src/index/gate.ts). Absent: every venue
+   * in `venues` with a publish gate, so a caller that wires no gates publishes none of them.
+   */
+  collectOnly?: ReadonlySet<string>;
   log: (line: string) => void;
 }
+
+/** The hour's quotes the print may count and publish may carry. */
+const countable = (d: HourDeps, quotes: readonly Quote[]): Quote[] => publishable(quotes, d.collectOnly ?? allGatedVenues(d.venues));
 
 export interface HourResult {
   hour: number;
@@ -116,7 +125,7 @@ async function republishStored(hour: number, d: HourDeps, log: (line: string) =>
     }
     const stored = await printForHour(d.sql, hour);
     if (!stored) return false;
-    await d.publish(hour, stored, await quotesForHour(d.sql, hour));
+    await d.publish(hour, stored, countable(d, await quotesForHour(d.sql, hour)));
     log(`hour ${hour}: republished the stored print`);
     return true;
   } catch (e) {
@@ -139,8 +148,10 @@ export async function runHourUnguarded(hour: number, d: HourDeps, now: Date): Pr
 
   // The print comes from the stored rows, not from memory: where another run's rows won a conflict, theirs count.
   const quotes = await quotesForHour(d.sql, hour);
+  // Collect-only venues are stored above but never reach the print or the files; the ping still sees every venue.
+  const shown = countable(d, quotes);
   // Taken after collection: print() must run with a `now` at or after the last readAt.
-  const p = print(quotes, { now: new Date(), hour });
+  const p = print(shown, { now: new Date(), hour });
   const inserted = await insertPrint(d.sql, p);
   if (!inserted) {
     log(`hour ${hour}: another run printed first; stopping`);
@@ -151,7 +162,7 @@ export async function runHourUnguarded(hour: number, d: HourDeps, now: Date): Pr
   let published = false;
   if (d.publish) {
     try {
-      await d.publish(hour, p, quotes);
+      await d.publish(hour, p, shown);
       published = true;
     } catch (e) {
       log(`hour ${hour}: publish failed: ${errorMessage(e)}`);

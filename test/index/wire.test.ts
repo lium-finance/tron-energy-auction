@@ -9,7 +9,7 @@ import { runMigrations } from "../../src/index/migrate.js";
 import { alertJob, buildDeps, republish } from "../../src/index/wire.js";
 import { testDbUrl as url } from "./testdb.js";
 
-const cfg: Config = { databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: null, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null };
+const cfg: Config = { databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: null, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null, collectOnly: new Set() };
 
 describe("buildDeps", () => {
   it("for the service: leaves publish absent in collect-only mode, and ping too when no ping URL is set, saying so once at start-up", () => {
@@ -171,5 +171,19 @@ describe.skipIf(!url)("publish wiring against Postgres", () => {
     expect(latest.quotes.map((x: { venue: string }) => x.venue)).toEqual(["tronsave"]);
     expect(existsSync(join(dir, "history.json"))).toBe(true);
     expect(existsSync(join(dir, "index.html"))).toBe(true);
+  });
+
+  it("leaves collect-only venues out of the republished latest.json", async () => {
+    await insertQuotes(sql, [{ ...q, venue: "gated", sunPerUnit: 30 }]);
+    const shown = mkdtempSync(join(tmpdir(), "wire-gate-"));
+    await republish(sql, shown, new Set());
+    expect(JSON.parse(readFileSync(join(shown, "latest.json"), "utf8")).quotes.map((x: { venue: string }) => x.venue)).toEqual(["gated", "tronsave"]);
+    const dir = mkdtempSync(join(tmpdir(), "wire-gate-"));
+    await republish(sql, dir, new Set(["gated"]));
+    expect(readFileSync(join(dir, "latest.json"), "utf8")).not.toContain("gated");
+    expect(readFileSync(join(dir, "index.html"), "utf8")).not.toContain("gated");
+  });
+  it("wires the configured collect-only set into the hour job", () => {
+    expect(buildDeps({ ...cfg, collectOnly: new Set(["itrx"]) }, sql, {}).collectOnly).toEqual(new Set(["itrx"]));
   });
 });

@@ -321,3 +321,41 @@ describe.skipIf(!url)("runHour", () => {
     expect(await hasPrint(sql, 6001)).toBe(true);
   });
 });
+
+describe.skipIf(!url)("collect-only venues", () => {
+  /** A venue that answers `sun` with full depth, behind a publish gate. */
+  const gated = (name: string, sun: number): VenueAdapter => ({ ...venue(name), publishGate: `PUBLISH_${name.toUpperCase()}`, parse: () => ({ raw: { kind: "sunPerUnit", value: sun, term: "1h" }, depth: 20_000_000 }) });
+
+  it("stores a gated venue's quote but leaves it out of the print and the published quotes", async () => {
+    const d = deps({ venues: [venue("a"), venue("b"), gated("g", 10)], collectOnly: new Set(["g"]) });
+    const r = await runHourUnguarded(7000, d, new Date("2026-10-28T14:00:03Z"));
+    // Two depth-aware venues without g: no index, though g would have made three.
+    expect(r).toMatchObject({ printed: true, status: "no_index", published: true });
+    expect((await quotesForHour(sql, 7000)).map((q) => q.venue)).toEqual(["a", "b", "g"]);
+    const [, p, published] = (d.publish as unknown as { mock: { calls: [number, { depthAwareCount: number; cheapest: number | null }, { venue: string }[]][] } }).mock.calls[0]!;
+    expect(p).toMatchObject({ depthAwareCount: 2, cheapest: 40 });
+    expect(published.map((q) => q.venue)).toEqual(["a", "b"]);
+    expect(d.ping).toHaveBeenCalledTimes(1);
+  });
+  it("leaves the gated venue out of a republished stored print too", async () => {
+    const d = deps({ venues: [venue("a"), venue("b"), gated("g", 10)], collectOnly: new Set(["g"]) });
+    const r = await runHourUnguarded(7000, d, new Date("2026-10-28T14:30:00Z"));
+    expect(r).toMatchObject({ printed: false, published: true });
+    const [, , published] = (d.publish as unknown as { mock: { calls: [number, unknown, { venue: string }[]][] } }).mock.calls[0]!;
+    expect(published.map((q) => q.venue)).toEqual(["a", "b"]);
+  });
+  it("keeps every gated venue collect-only when no set is wired", async () => {
+    const d = deps({ venues: [venue("a"), venue("b"), gated("g", 10)] });
+    await runHourUnguarded(7001, d, new Date("2026-10-28T15:00:03Z"));
+    const [, , published] = (d.publish as unknown as { mock: { calls: [number, unknown, { venue: string }[]][] } }).mock.calls[0]!;
+    expect(published.map((q) => q.venue)).toEqual(["a", "b"]);
+  });
+  it("counts and publishes a gated venue whose gate is open", async () => {
+    const d = deps({ venues: [venue("a"), venue("b"), gated("g", 10)], collectOnly: new Set() });
+    const r = await runHourUnguarded(7002, d, new Date("2026-10-28T16:00:03Z"));
+    expect(r).toMatchObject({ printed: true, status: "live" });
+    const [, p, published] = (d.publish as unknown as { mock: { calls: [number, { cheapest: number | null }, { venue: string }[]][] } }).mock.calls[0]!;
+    expect(p.cheapest).toBe(10);
+    expect(published.map((q) => q.venue)).toEqual(["a", "b", "g"]);
+  });
+});

@@ -169,6 +169,13 @@ describe.skipIf(!url)("clearability inputs from stored rows", () => {
     expect(JSON.parse(ok.stdout)).toMatchObject({ pass: true, hour: H0, inputs: { netSun: { value: 35.4, source: "db", hour: H0 }, dealerSun: { value: 44, source: "flag" }, burnSun: { value: 100, source: "default" } } });
   });
 
+  it("never takes a collect-only venue's quote as the dealer default: the record is public", async () => {
+    await insertQuotes(sql, [net(H0, 35), q(H0, "tronsave", 50), q(H0, "gated", 40), q(H0 + 1, "gated", 41)]);
+    expect(await clearabilityDefaults(sql, new Set())).toMatchObject({ paired: { dealer: db(40, H0, "gated") }, latestDealer: db(41, H0 + 1, "gated") });
+    const d = await clearabilityDefaults(sql, new Set(["gated"]));
+    expect(d).toMatchObject({ paired: { dealer: db(50, H0, "tronsave") }, latestDealer: db(50, H0, "tronsave") });
+  });
+
   it("net rates and dealer quotes stored in different hours only: a no-paired-hour result, exit 0", async () => {
     await insertQuotes(sql, [net(H0, 35.4), q(H0 + 1, "tronsave", 44)]);
     expect(await clearabilityDefaults(sql)).toMatchObject({ paired: null, latestNet: { value: 35.4 }, latestDealer: { value: 44 } });

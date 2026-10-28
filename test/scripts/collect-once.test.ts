@@ -11,7 +11,7 @@ import { collectOnceDeps, runCollectOnce } from "../../src/scripts/collect-once-
 import { testDbUrl as url } from "../index/testdb.js";
 
 const PING = "https://hc-ping.test/collect-once-check";
-const cfg: Config = { databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: PING, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null };
+const cfg: Config = { databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: PING, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null, collectOnly: new Set() };
 
 describe("collectOnceDeps", () => {
   it("has no ping function whatever PUBLISH is, even with HEALTHCHECK_PING_URL set, and logs no ping line", () => {

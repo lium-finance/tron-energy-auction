@@ -3,7 +3,9 @@ import { BAND_WINDOW_HOURS } from "../core/pass.js";
 import { to4dp } from "../core/stats.js";
 import { INSTRUMENT, type Quote } from "../core/types.js";
 import { ConfigError } from "../index/config.js";
+import { collectOnlyVenues } from "../index/config.js";
 import { lastEnergyFeeRow, quotesBetween, type Sql } from "../index/db.js";
+import { publishable } from "../index/gate.js";
 import { SEED_ENERGY_FEE_SUN } from "../index/hour.js";
 import { flagValue, shown } from "./args.js";
 import { assembleBandHours, isDealerQuote, isNetQuote } from "./band.js";
@@ -88,12 +90,15 @@ export function defaultsFromQuotes(quotes: readonly Quote[]): Pick<Defaults, "pa
 /** The defaults when nothing is read from the database (every input given by flag): no stored rows, the default burn price. */
 export const NO_STORED_DEFAULTS: Defaults = { window: null, paired: null, latestNet: null, latestDealer: null, burn: { value: DEFAULT_BURN_SUN, source: "default", hour: null } };
 
-/** The database defaults: net and dealer from the latest 24 stored quote hours, burn from the newest chain row at or before that window's end. */
-export async function clearabilityDefaults(sql: Sql): Promise<Defaults> {
+/**
+ * The database defaults: net and dealer from the latest 24 stored quote hours, burn from the newest chain row at or before
+ * that window's end. Collect-only venues (src/index/gate.ts) are never a default: the result goes into a public decision record.
+ */
+export async function clearabilityDefaults(sql: Sql, collectOnly: ReadonlySet<string> = collectOnlyVenues(process.env)): Promise<Defaults> {
   const [latest] = await sql<{ hour: string | null }[]>`select max(hour)::text as hour from quotes`;
   const to = latest?.hour == null ? null : Number(latest.hour);
   const window = to === null ? null : { from: to - (BAND_WINDOW_HOURS - 1), to };
-  const found = window ? defaultsFromQuotes(await quotesBetween(sql, window.from, window.to)) : { paired: null, latestNet: null, latestDealer: null };
+  const found = window ? defaultsFromQuotes(publishable(await quotesBetween(sql, window.from, window.to), collectOnly)) : { paired: null, latestNet: null, latestDealer: null };
   const fee = await lastEnergyFeeRow(sql, to ?? Number.MAX_SAFE_INTEGER);
   const burn: Input = fee && fee.fee > 0 ? { value: fee.fee, source: "db", hour: fee.hour } : { value: DEFAULT_BURN_SUN, source: "default", hour: null };
   return { window, ...found, burn };

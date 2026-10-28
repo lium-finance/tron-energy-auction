@@ -5,7 +5,7 @@ const base = { DATABASE_URL: "postgres://u:p@h/db", TRONGRID_API_KEY: "k", PUBLI
 
 describe("loadConfig", () => {
   it("reads the env with defaults for the optional values", () => {
-    expect(loadConfig(base)).toEqual({ databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: null, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null });
+    expect(loadConfig(base)).toEqual({ databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: null, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null, collectOnly: new Set() });
   });
   it("requires HEALTHCHECK_PING_URL when PUBLISH is on", () => {
     expect(() => loadConfig({ ...base, PUBLISH: "on" })).toThrow("HEALTHCHECK_PING_URL is required when PUBLISH=on");
@@ -18,7 +18,7 @@ describe("loadConfig", () => {
   });
   it("trims every value it reads and treats a blank value as unset", () => {
     const c = loadConfig({ DATABASE_URL: "  postgres://u:p@h/db \n", TRONGRID_API_KEY: " k ", PUBLISH: " on ", HEALTHCHECK_PING_URL: " https://hc-ping.com/x ", ALERT_WEBHOOK_URL: "  ", PUBLIC_DIR: " out ", PORT: " 8080 ", NETTS_API_KEY: " n ", VERIFY_WALLETS_FILE: " docs/verification/wallets.json ", VERIFY_RPS: " 3 " });
-    expect(c).toEqual({ databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: true, alertWebhookUrl: null, healthcheckPingUrl: "https://hc-ping.com/x", publicDir: "out", port: 8080, nettsApiKey: "n", verifyWalletsFile: "docs/verification/wallets.json", verifyRps: "3" });
+    expect(c).toEqual({ databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: true, alertWebhookUrl: null, healthcheckPingUrl: "https://hc-ping.com/x", publicDir: "out", port: 8080, nettsApiKey: "n", verifyWalletsFile: "docs/verification/wallets.json", verifyRps: "3", collectOnly: new Set() });
     expect(loadConfig({ ...base, PUBLISH: "  ", PORT: "" }).publish).toBe(false);
     expect(() => loadConfig({ DATABASE_URL: "  ", TRONGRID_API_KEY: "k" })).toThrow("DATABASE_URL is required");
   });
