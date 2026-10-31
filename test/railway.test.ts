@@ -27,9 +27,9 @@ describe("railway.json", () => {
   });
 
   it("starts the file the build writes for src/index/main.ts, the same command as npm start", () => {
-    // tsconfig.build.json includes only src, so tsc's root is src and src/index/main.ts compiles to <outDir>/index/main.js.
+    // tsconfig.build.json sets rootDir to src (TypeScript 7 requires it explicitly), so src/index/main.ts compiles to <outDir>/index/main.js.
     const build = json("tsconfig.build.json");
-    expect(build).toEqual({ extends: "./tsconfig.json", include: ["src"] });
+    expect(build).toEqual({ extends: "./tsconfig.json", compilerOptions: { rootDir: "src" }, include: ["src"] });
     const outDir = json("tsconfig.json").compilerOptions.outDir;
     expect(outDir).toBe("dist");
     expect(existsSync(join(root, "src/index/main.ts"))).toBe(true);
