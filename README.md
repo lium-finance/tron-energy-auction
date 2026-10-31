@@ -42,10 +42,15 @@ Built by [LIUM Finance](https://lium.finance). The research behind it is the pos
 | Sanity band | a quote below 1 sun or above the chain's energy fee for the hour is `rejected` and kept with its raw value |
 | Corrections | none: prints are immutable, missing hours are never backfilled |
 
-Venues asked today: TronSave, TronBid, GetBlock, NetTS, JustLend (daily series), plus TronGrid for the chain and
-CoinGecko for the TRX price. Only TronSave currently answers a size for the 1-hour instrument, so most hours print
-`no_index` with the full per-venue ladder published. That is a finding, not a bug: see
+Venues asked today: TronSave, TronBid, GetBlock, NetTS, JustLend (daily series), TronPulse, and, collect-only,
+iTRX, TRON Energy Market, TronZap and TokenGoodies; plus TronGrid for the chain and CoinGecko for the TRX price. Only TronSave
+currently answers a size for the 1-hour instrument among the published venues, so most hours print `no_index` with
+the full per-venue ladder published. That is a finding, not a bug: see
 [docs/methodology.md](docs/methodology.md#why-most-hours-print-no_index-today).
+
+The collect-only venues' terms restrict automated reads or reproducing their data. Their quotes are stored but never
+counted in a print, published, or used in a decision record until their `PUBLISH_<VENUE>` variable is `on`
+([docs/methodology.md](docs/methodology.md#collect-only-venues)).
 
 ## Quick start
 
@@ -96,6 +101,7 @@ Secret values are never logged: every log line, stored reason and alert is redac
 | `ALERT_WEBHOOK_URL` | no | yes | Webhook (https) for degraded-data and thin-share alerts. Unset: stderr. |
 | `PUBLIC_DIR` | no (`public`) | no | Where the public files are written and served from. |
 | `PORT` | no (`3000`) | no | HTTP port. |
+| `PUBLISH_ITRX`, `PUBLISH_TRONENERGY_MARKET`, `PUBLISH_TRONZAP`, `PUBLISH_TOKENGOODIES` | no (`off`) | no | `on` counts and publishes that venue's quotes; `off` stores them only. Their terms restrict reproducing their data: read them before turning one on. |
 | `NETTS_API_KEY` | no | yes | NetTS key. Not used until a keyed response is recorded and parsed. |
 | `VERIFY_WALLETS_FILE` | for the supplier and utilisation facts | the file is private | Wallets to read hourly. Shape: [docs/verification/wallets.example.json](docs/verification/wallets.example.json). Never commit the real file. |
 | `VERIFY_RPS` | no (`2`) | no | TronGrid requests a second for wallet reads, 1 to 10. |
@@ -150,8 +156,7 @@ Version 0.1: the index and the four fact scripts are complete and tested. Not ye
 
 - the auction itself (contracts on the TVM, a keeper, an agent-facing API), which waits on the facts;
 - a clearing simulator that replays real hours through the corrected clearing rule;
-- collectors for venues that quote a headline price without depth (iTRX, TronZap, TokenGoodies, TRON Energy Market,
-  TronPulse).
+- a decision on publishing iTRX, TRON Energy Market, TronZap and TokenGoodies, which are collected but not published.
 
 Proposals are welcome as issues.
 

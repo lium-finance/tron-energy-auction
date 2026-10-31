@@ -2,6 +2,15 @@
 
 All notable changes are listed here. Method changes carry the `METHOD_VERSION` they introduce.
 
+## Unreleased
+
+- A collector for TronPulse: its keyless 1-hour minimum price published as a `depth-unknown` row.
+- Collectors for iTRX, TRON Energy Market, TronZap and TokenGoodies, collect-only: stored, never counted in a print,
+  published or used in a decision record unless `PUBLISH_ITRX`, `PUBLISH_TRONENERGY_MARKET`, `PUBLISH_TRONZAP` or
+  `PUBLISH_TOKENGOODIES` is `on`.
+- An empty order book is a `no-depth` row with no price.
+- The dead-man ping counts only published venues. A collect-only venue (`PUBLISH_*` off) does not keep it alive.
+
 ## 0.1.0
 
 First public release.

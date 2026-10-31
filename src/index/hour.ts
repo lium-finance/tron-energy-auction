@@ -5,6 +5,7 @@ import { print } from "../core/print.js";
 import type { Print, Quote } from "../core/types.js";
 import { hasPrint, insertChain, insertPayloads, insertPrint, insertQuotes, lastEnergyFeeRow, lastPrint, printForHour, quotesForHour, type Sql } from "./db.js";
 import { errorMessage } from "../core/errors.js";
+import { allGatedVenues, publishable } from "./gate.js";
 
 export interface HourDeps {
   sql: Sql;
@@ -18,8 +19,8 @@ export interface HourDeps {
   /**
    * The dead-man ping, present whenever HEALTHCHECK_PING_URL is set, in either mode, so a deployment that
    * collects without publishing is watched too. Sent by the run that inserted
-   * the print, after the print (and after a successful publish when publishing); withheld when every 1h quote failed or
-   * is missing. Its failure never fails the hour.
+   * the print, after the print (and after a successful publish when publishing); withheld when every published 1h quote
+   * failed or is missing. A collect-only venue does not count. Its failure never fails the hour.
    */
   ping?: () => Promise<boolean>;
   /**
@@ -33,8 +34,16 @@ export interface HourDeps {
   /** Removes configured secret values only (redactConfiguredSecrets); quote sources then keep the endpoint path. Absent: sources keep only the host. */
   redactValues?: (s: string) => string;
   env: NodeJS.ProcessEnv;
+  /**
+   * Venues collected and stored but never counted in the print or published (src/index/gate.ts). Absent: every venue
+   * in `venues` with a publish gate, so a caller that wires no gates publishes none of them.
+   */
+  collectOnly?: ReadonlySet<string>;
   log: (line: string) => void;
 }
+
+/** The hour's quotes the print may count and publish may carry. */
+const countable = (d: HourDeps, quotes: readonly Quote[]): Quote[] => publishable(quotes, d.collectOnly ?? allGatedVenues(d.venues));
 
 export interface HourResult {
   hour: number;
@@ -69,7 +78,7 @@ const inFlight = new Map<number, Promise<HourResult>>();
  *
  * A chain-table write failure is logged and never stops collection; a raw-payload write failure is logged and never stops the print. A publish failure is logged and reported as
  * `published: false` with no ping; the next hour's publish rewrites history.json from all prints and start-up
- * republishes, so a missed publish heals. A failed ping is logged and never fails the hour. The ping is withheld when every stored 1h quote is failed or missing, so a total collector outage trips the monitor. Failures of
+ * republishes, so a missed publish heals. A failed ping is logged and never fails the hour. The ping is withheld when every published 1h quote is failed or missing, so an outage of the venues that are published trips the monitor. A collect-only venue does not keep it alive. Failures of
  * insertQuotes and insertPrint reject, and the caller (the ticker) must catch.
  */
 export function runHour(hour: number, d: HourDeps, now: Date = new Date()): Promise<HourResult> {
@@ -116,7 +125,7 @@ async function republishStored(hour: number, d: HourDeps, log: (line: string) =>
     }
     const stored = await printForHour(d.sql, hour);
     if (!stored) return false;
-    await d.publish(hour, stored, await quotesForHour(d.sql, hour));
+    await d.publish(hour, stored, countable(d, await quotesForHour(d.sql, hour)));
     log(`hour ${hour}: republished the stored print`);
     return true;
   } catch (e) {
@@ -139,8 +148,10 @@ export async function runHourUnguarded(hour: number, d: HourDeps, now: Date): Pr
 
   // The print comes from the stored rows, not from memory: where another run's rows won a conflict, theirs count.
   const quotes = await quotesForHour(d.sql, hour);
+  // Collect-only venues are stored above but never reach the print, the files, or the dead-man ping.
+  const shown = countable(d, quotes);
   // Taken after collection: print() must run with a `now` at or after the last readAt.
-  const p = print(quotes, { now: new Date(), hour });
+  const p = print(shown, { now: new Date(), hour });
   const inserted = await insertPrint(d.sql, p);
   if (!inserted) {
     log(`hour ${hour}: another run printed first; stopping`);
@@ -151,7 +162,7 @@ export async function runHourUnguarded(hour: number, d: HourDeps, now: Date): Pr
   let published = false;
   if (d.publish) {
     try {
-      await d.publish(hour, p, quotes);
+      await d.publish(hour, p, shown);
       published = true;
     } catch (e) {
       log(`hour ${hour}: publish failed: ${errorMessage(e)}`);
@@ -209,15 +220,17 @@ async function collectAndStore(hour: number, d: HourDeps, ctx: CollectContext, l
 }
 
 /**
- * The dead-man ping, in both modes, so collect-only deployments are watched too. Almost every hour is no_index by design,
- * so a total collector outage prints (and publishes) like a quiet hour; the ping is withheld when every stored 1h quote
- * failed or is missing, so the monitor sees the outage. A failed or throwing ping is logged and never fails the hour.
+ * The dead-man ping, in both modes, so a deployment with PUBLISH=off is watched too. Almost every hour is no_index by design,
+ * so an outage of the published venues prints (and publishes) like a quiet hour; the ping is withheld when every published
+ * 1h quote failed or is missing. A venue whose PUBLISH_* flag is off does not count, so it cannot keep the ping alive.
+ * A failed or throwing ping is logged and never fails the hour.
  */
 async function pingUnlessAllFailed(hour: number, d: HourDeps, quotes: readonly Quote[], log: (line: string) => void): Promise<void> {
   if (!d.ping) return;
-  const allFailed = quotes.filter((q) => q.term === "1h").every((q) => q.status === "failed" || q.status === "missing");
+  const published = countable(d, quotes).filter((q) => q.term === "1h");
+  const allFailed = published.every((q) => q.status === "failed" || q.status === "missing");
   if (allFailed) {
-    log(`hour ${hour}: ping withheld: every venue failed`);
+    log(`hour ${hour}: ping withheld: every published venue failed`);
     return;
   }
   let ok = false;

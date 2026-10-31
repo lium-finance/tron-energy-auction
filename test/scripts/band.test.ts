@@ -195,6 +195,17 @@ describe.skipIf(!url)("the band fact over stored quotes", () => {
     expect(await defaultBandWindow(sql)).toEqual({ from: 1_000_001, to: 1_000_024 });
   });
 
+  it("leaves collect-only venues out of the hours and the term premium: the record is public", async () => {
+    await seed(H0, 24, () => false);
+    // A gated venue 50 sun above net every hour would make every hour pass if it counted.
+    await insertQuotes(sql, Array.from({ length: 24 }, (_, i) => q(H0 + i, "gated", 34)));
+    const shown = await bandFact(sql, { from: H0, to: H0 + 23 }, new Date((H0 + 24) * 3_600_000), new Set());
+    expect(shown.hours[0]).toMatchObject({ cheapestSun: 34, cheapestVenue: "gated" });
+    const f = await bandFact(sql, { from: H0, to: H0 + 23 }, new Date((H0 + 24) * 3_600_000), new Set(["gated"]));
+    expect(f.hours.every((h) => h.cheapestVenue === "tronsave")).toBe(true);
+    expect(JSON.stringify(f)).not.toContain("gated");
+  });
+
   it("no justlend-net rows: no window, nothing observed, not a pass", async () => {
     await insertQuotes(sql, [q(H0, "tronsave", 41)]);
     expect(await bandFact(sql, null)).toMatchObject({ from: null, to: null, spanHours: null, hoursSinceTo: null, stale: false, pass: false, hoursAbove: 0, hoursObserved: 0, complete: false, hours: [], termPremium: { exists: false, venues: [] } });

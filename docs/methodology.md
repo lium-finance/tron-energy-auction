@@ -18,7 +18,7 @@ in `quotes`, failures included, with a status and a reason:
 | Status | Meaning |
 | --- | --- |
 | `ok` | A parsed quote. |
-| `no-depth` | The venue answered but cannot fill the requested size. |
+| `no-depth` | The venue answered but cannot fill the requested size. An empty order book is `no-depth` with no price. |
 | `depth-unknown` | The venue publishes a price but no size it can fill (a package catalog or a page tier). It is shown, never counted. |
 | `rejected` | The price fell outside the sanity band (below 1 sun, or above the hour's energy fee from the chain). The raw value is kept. |
 | `failed` | Timeout, HTTP error, rate limit, or a response that no longer matches the parser. The reason says which. |
@@ -51,11 +51,22 @@ hour stays missing: prices are never backfilled or extrapolated.
 
 ### Why most hours print `no_index` today
 
-At the time of writing only TronSave answers a size for the 1-hour instrument. TronBid's public catalog tops out at
-about 1,048,000 units, GetBlock's page tiers at 540,000, and NetTS needs a key and caps an order at 3,000,000
-(`docs/verification/venue-apis.md`). JustLend's minimum rental is three hours, so it cannot quote the instrument; its
-daily rate is published as a separate series. The rule is kept as written rather than lowered to fit the venues: the
-feed publishes the full per-venue ladder with the `no_index` flag, so the gap is visible.
+At the time of writing only TronSave answers a size for the 1-hour instrument among the published venues. TronBid's
+public catalog tops out at about 1,048,000 units, GetBlock's page tiers at 540,000, and NetTS needs a key and caps an
+order at 3,000,000 (`docs/verification/venue-apis.md`). TronPulse's keyless rate is its 1-hour minimum buy price,
+without depth, so it is `depth-unknown` (`docs/verification/venue-apis-2026-10-28.md`). JustLend's minimum rental is three hours, so it cannot quote the
+instrument; its daily rate is published as a separate series. The rule is kept as written rather than lowered to fit
+the venues: the feed publishes the full per-venue ladder with the `no_index` flag, so the gap is visible.
+
+### Collect-only venues
+
+iTRX, TRON Energy Market and TokenGoodies answer a price with depth (platform availability, a pool ladder, an open
+buy-order book), and TronZap a `depth-unknown` price for one 65,000-unit transfer, but their terms restrict automated
+reads or reproducing their data. They are asked every hour and
+their quotes are stored, but the print is computed without them, `latest.json` and the page leave them out, and the
+band and clearability facts ignore them, until the venue's `PUBLISH_ITRX`, `PUBLISH_TRONENERGY_MARKET`,
+`PUBLISH_TRONZAP` or `PUBLISH_TOKENGOODIES` is `on` (`src/index/gate.ts`). Turning one on changes which venues the print can count from
+that hour on; stored prints are not recomputed.
 
 ## What is published
 
@@ -64,7 +75,7 @@ partial file), and served read-only by `src/index/serve.ts`:
 
 | Path | Contents |
 | --- | --- |
-| `/latest.json` | The latest print, every quote of that hour with its status and reason, the 1-day series, the chain fields, and the method version. |
+| `/latest.json` | The latest print, every quote of that hour (except collect-only venues') with its status and reason, the 1-day series, the chain fields, and the method version. |
 | `/history.json` | Every print. |
 | `/` or `/index.html` | A page rendered from the same data: the print, the venue ladder, the method in five sentences, and the longer-term series. |
 | `/healthz` | `ok` while the process is up. |
@@ -94,7 +105,7 @@ unread hours. Results within about 2 % of a threshold are reported as marginal.
 ## Alerts
 
 - **Dead-man ping:** after each print, one GET to `HEALTHCHECK_PING_URL`, so an outside monitor alerts when prints stop.
-  The ping is withheld when every venue failed, so a total collector outage also trips the monitor.
+  The ping is withheld when every published venue failed or is missing, so an outage of the venues that feed the print trips the monitor. A collect-only venue does not count.
 - **Degraded data** (at `:05`, once per UTC day): the two latest prints both had no venue able to fill the instrument,
   no 1-hour quote other than failed or missing, or no chain read.
 - **Thin share** (at `:05`, once per UTC day): more than 10 % of the last 24 prints are `thin`.
