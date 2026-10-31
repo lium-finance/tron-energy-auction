@@ -41,7 +41,7 @@ not workspaces.
 3. The print is computed from the stored quotes and inserted with `on conflict (hour) do nothing`. If another process
    printed first, this run stops: only one print per hour can exist.
 4. With `PUBLISH=on`, the three public files are rewritten (temporary file, then rename).
-5. The run that inserted the print pings the dead-man monitor, unless every venue failed.
+5. The run that inserted the print pings the dead-man monitor, unless every published venue failed or is missing. A collect-only venue does not count.
 6. If a wallets file is configured, the supplier and top-100 wallets are read into `verification`. These rows are never
    published.
 

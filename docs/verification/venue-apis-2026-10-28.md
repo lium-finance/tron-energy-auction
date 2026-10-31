@@ -47,6 +47,7 @@ in its terms. Published as `depth-unknown`. When the book endpoints answer 200, 
 `freezeperiodinblocks` (1200 is 1 hour; `freezeperiod` reads 3 on 1h orders too). Depth from it is the size buyers
 bid for, not energy on offer. The open book was empty each time it was read, so the non-empty case is tested on
 `tokengoodies-list-details-constructed.json`: four `orderdata` rows from the recorded recent trades (two 1h, one
-3-day, one 7-day partly filled) with the creator, receiver and source addresses removed. Terms
+3-day, one 7-day partly filled) with the creator, receiver and source addresses removed, and the transaction hashes,
+document ids and contract address replaced by placeholders. Terms
 (resources/disclaimers/terms.htm): personal use only, "You can't reproduce the data shown on TokenGoodies
 website/service", "usage of bots on TokenGoodies apps is discouraged". Collect-only.

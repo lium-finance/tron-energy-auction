@@ -97,7 +97,7 @@ describe.skipIf(!url)("runHour", () => {
     expect(r).toMatchObject({ printed: true, status: "no_index", published: true });
     expect(d.publish).toHaveBeenCalledTimes(1);
     expect(d.ping).not.toHaveBeenCalled();
-    expect(lines.some((l) => l.includes("ping withheld: every venue failed"))).toBe(true);
+    expect(lines.some((l) => l.includes("ping withheld: every published venue failed"))).toBe(true);
   });
   it("still pings when only some venues failed", async () => {
     const d = deps({ venues: [venue("a"), { ...venue("x"), parse: () => { throw new Error("drift"); } }] });
@@ -122,7 +122,7 @@ describe.skipIf(!url)("runHour", () => {
     const r = await runHour(1013, d);
     expect(r).toMatchObject({ printed: true, status: "no_index" });
     expect(d.ping).not.toHaveBeenCalled();
-    expect(lines.some((l) => l.includes("ping withheld: every venue failed"))).toBe(true);
+    expect(lines.some((l) => l.includes("ping withheld: every published venue failed"))).toBe(true);
   });
   it("in collect-only mode does not ping on the no-op path (only the run that inserted the print pings)", async () => {
     const d = deps({ publish: undefined });
@@ -357,5 +357,21 @@ describe.skipIf(!url)("collect-only venues", () => {
     const [, p, published] = (d.publish as unknown as { mock: { calls: [number, { cheapest: number | null }, { venue: string }[]][] } }).mock.calls[0]!;
     expect(p.cheapest).toBe(10);
     expect(published.map((q) => q.venue)).toEqual(["a", "b", "g"]);
+  });
+  it("does not let a collect-only venue keep the ping alive when every published venue failed", async () => {
+    const lines: string[] = [];
+    const failed = (name: string): VenueAdapter => ({ ...venue(name), parse: () => { throw new Error("drift"); } });
+    const d = deps({ venues: [failed("a"), failed("b"), gated("g", 40)], collectOnly: new Set(["g"]), log: (l) => lines.push(l) });
+    const r = await runHourUnguarded(7010, d, new Date("2026-10-28T17:00:03Z"));
+    expect(r).toMatchObject({ printed: true, status: "no_index" });
+    expect((await quotesForHour(sql, 7010)).find((q) => q.venue === "g")?.status).toBe("ok");
+    expect(d.ping).not.toHaveBeenCalled();
+    expect(lines.some((l) => l.includes("ping withheld: every published venue failed"))).toBe(true);
+  });
+  it("pings when a gated venue is published and is the only one that did not fail", async () => {
+    const failed = (name: string): VenueAdapter => ({ ...venue(name), parse: () => { throw new Error("drift"); } });
+    const d = deps({ venues: [failed("a"), gated("g", 40)], collectOnly: new Set() });
+    await runHourUnguarded(7011, d, new Date("2026-10-28T18:00:03Z"));
+    expect(d.ping).toHaveBeenCalledTimes(1);
   });
 });

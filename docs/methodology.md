@@ -105,7 +105,7 @@ unread hours. Results within about 2 % of a threshold are reported as marginal.
 ## Alerts
 
 - **Dead-man ping:** after each print, one GET to `HEALTHCHECK_PING_URL`, so an outside monitor alerts when prints stop.
-  The ping is withheld when every venue failed, so a total collector outage also trips the monitor.
+  The ping is withheld when every published venue failed or is missing, so an outage of the venues that feed the print trips the monitor. A collect-only venue does not count.
 - **Degraded data** (at `:05`, once per UTC day): the two latest prints both had no venue able to fill the instrument,
   no 1-hour quote other than failed or missing, or no chain read.
 - **Thin share** (at `:05`, once per UTC day): more than 10 % of the last 24 prints are `thin`.

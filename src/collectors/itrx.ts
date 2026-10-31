@@ -16,7 +16,7 @@ function num(b: Record<string, unknown>, name: string): number {
 }
 
 /**
- * iTRX's keyless catalog (recorded 2026-10-28 in docs/verification/venue-apis.md; fixture test/fixtures/itrx-index-data.json):
+ * iTRX's keyless catalog (recorded 2026-10-28 in docs/verification/venue-apis-2026-10-28.md; fixture test/fixtures/itrx-index-data.json):
  * `tiered_pricing[period 0].price` and `g1h` are the 1-hour price in sun per unit, and `platform_avail_energy` is the
  * energy the platform can delegate now, which is the depth. One GET carries both. The size quote
  * (`/api/v1/frontend/order/price?period=1H&energy_amount=...`) answered the same 35 sun for 20M and for 250M, above the
