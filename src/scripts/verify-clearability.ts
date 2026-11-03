@@ -15,6 +15,6 @@ await runScript(async () => {
   loadDotEnv();
   const flags = parseClearabilityArgs(process.argv.slice(2));
   const allFlagsGiven = flags.net !== undefined && flags.dealer !== undefined && flags.burn !== undefined;
-  const defaults: Defaults = allFlagsGiven ? NO_STORED_DEFAULTS : await withDb(databaseEnv().databaseUrl, clearabilityDefaults);
+  const defaults: Defaults = allFlagsGiven ? NO_STORED_DEFAULTS : await withDb(databaseEnv().databaseUrl, (sql) => clearabilityDefaults(sql));
   printJsonLine(clearabilityFact(resolveInputs(flags, defaults), defaults.window));
 });

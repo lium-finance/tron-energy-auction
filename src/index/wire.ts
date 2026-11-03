@@ -8,6 +8,7 @@ import { parseVerifyRps, type Config } from "./config.js";
 import { allPrints, chainForHour, lastPrint, PAYLOAD_RETENTION_DAYS, prunePayloads, quotesForHour, type Sql } from "./db.js";
 import type { HourDeps } from "./hour.js";
 import { buildLatest, publishFiles, type ChainSummary } from "./publish.js";
+import { allGatedVenues, publishable } from "./gate.js";
 import { redactConfiguredSecrets, redactSecrets } from "./redact.js";
 import { loadWallets } from "./wallet-list.js";
 import { readWallets } from "./wallets.js";
@@ -39,15 +40,16 @@ export async function publishPrint(sql: Sql, dir: string, p: Print, quotes: read
 /**
  * Start-up with PUBLISH=on: Railway's disk is replaced on every deploy, so the files are rebuilt from the last print
  * row before serving. With no print row yet, the page says when the first print is due and latest.json is absent.
- * Returns the hour republished, or null for the first-print page.
+ * Returns the hour republished, or null for the first-print page. Collect-only venues' quotes are left out of
+ * latest.json, as the hour job leaves them out (`collectOnly` defaults to every gated venue).
  */
-export async function republish(sql: Sql, dir: string): Promise<number | null> {
+export async function republish(sql: Sql, dir: string, collectOnly: ReadonlySet<string> = allGatedVenues()): Promise<number | null> {
   const last = await lastPrint(sql);
   if (!last) {
     await publishFiles(dir, null, []);
     return null;
   }
-  await publishPrint(sql, dir, last, await quotesForHour(sql, last.hour));
+  await publishPrint(sql, dir, last, publishable(await quotesForHour(sql, last.hour), collectOnly));
   return last.hour;
 }
 
@@ -76,6 +78,7 @@ export function buildDeps(cfg: Config, sql: Sql, env: NodeJS.ProcessEnv, log: (l
     redact,
     redactValues: (s) => redactConfiguredSecrets(s, env),
     env: venueEnv(cfg.nettsApiKey),
+    collectOnly: cfg.collectOnly,
     log,
   };
   if (cfg.verifyWalletsFile) {

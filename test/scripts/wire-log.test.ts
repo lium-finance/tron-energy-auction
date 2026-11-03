@@ -25,7 +25,7 @@ describe("makeLog", () => {
 });
 
 describe("buildDeps", () => {
-  const cfg: Config = { databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: null, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null };
+  const cfg: Config = { databaseUrl: "postgres://u:p@h/db", trongridApiKey: "k", publish: false, alertWebhookUrl: null, healthcheckPingUrl: null, publicDir: "public", port: 3000, nettsApiKey: null, verifyWalletsFile: null, verifyRps: null, collectOnly: new Set() };
   it("uses the logger it is given, so a script can keep stdout for its result", () => {
     const lines: string[] = [];
     const deps = buildDeps({ ...cfg, healthcheckPingUrl: "https://hc-ping.com/x" }, {} as Sql, {}, (l) => lines.push(l));

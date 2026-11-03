@@ -28,7 +28,7 @@ async function main(): Promise<void> {
   log(`start: venues=${deps.venues.length}`);
 
   if (cfg.publish) {
-    const hour = await republish(sql, cfg.publicDir);
+    const hour = await republish(sql, cfg.publicDir, cfg.collectOnly);
     log(hour === null ? "start: no print yet; wrote the first-print page" : `start: republished hour ${hour}`);
   }
   // Always up, so the platform healthcheck has /healthz; with PUBLISH=off the file routes 404.

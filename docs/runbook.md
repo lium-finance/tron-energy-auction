@@ -58,8 +58,9 @@ Done by a person in the Railway dashboard:
 1. Create a project. Add a Postgres database.
 2. Add a service from your fork or clone of `lium-finance/tron-energy-auction`.
 3. Create a check on healthchecks.io with a 60-minute period and a 2-hour grace, and copy its ping URL. The dead-man
-   ping runs from the first deploy, in collect-only mode too: after each print, and withheld when every venue failed,
-   so a dead process is noticed before anything is published.
+   ping runs from the first deploy, in collect-only mode too: after each print, and withheld when every published venue failed
+   or is missing, so a dead process, or an outage of the venues that feed the print, is noticed before anything is published.
+   A venue whose PUBLISH_* flag is off does not keep the ping alive.
 4. Put the wallets file on a volume, as in [Verification reads](#verification-reads-supplier-and-top-100-wallets),
    option (a), if you run the supplier and utilisation reads: create a volume, attach it at `/data`, and upload `docs/verification/wallets.json` (and its `top100File`,
    if it names one) with the Railway CLI. The supplier and utilisation facts need 24 hours of wallet reads, so start the
@@ -286,9 +287,9 @@ Prices are never backfilled. A missed or failed hour stays missing or failed; th
 ### The dead-man ping stops
 
 - Symptom: healthchecks.io alerts. In the logs: `[ping] monitor returned <status>` or `[ping] failed: <error>`, then
-  `hour <h>: dead-man ping failed (the monitor will alert if this persists)`; or `hour <h>: ping withheld: every venue failed`;
+  `hour <h>: dead-man ping failed (the monitor will alert if this persists)`; or `hour <h>: ping withheld: every published venue failed`;
   or no `printed` line at all.
-- Cause: the monitor is unreachable, every venue failed (the ping is withheld on purpose), a publish failed
+- Cause: the monitor is unreachable, every published venue failed (the ping is withheld on purpose; a collect-only venue does not count), a publish failed
   (with `PUBLISH=on`: `hour <h>: publish failed: ...`; no ping after a failed publish), or the process is not running the hour.
 - Action: read the logs for the hours since the last ping. If the process is down or stuck, see below.
 

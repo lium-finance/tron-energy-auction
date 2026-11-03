@@ -1,0 +1,17 @@
+{
+  "platform_avail_energy": 12387503,
+  "platform_max_energy": 11751890,
+  "minimum_order_energy": 12000,
+  "maximum_order_energy": 200000000,
+  "small_amount": 50000,
+  "small_addition": 0.25,
+  "default_price": 40,
+  "tiered_pricing": [
+    {"period": 0, "price": 35.0},
+    {"period": 1, "price": 100.0},
+    {"period": 3, "price": 65.0},
+    {"period": 30, "price": 60.0}
+  ],
+  "g1h": 35.0,
+  "dynamic_pricing": 0
+}

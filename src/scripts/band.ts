@@ -2,7 +2,9 @@ import { BAND_WINDOW_HOURS, bandPass, termPremium, type BandHour } from "../core
 import { isDepthAware } from "../core/print.js";
 import { median, to4dp } from "../core/stats.js";
 import { INSTRUMENT, type Quote, type Term } from "../core/types.js";
+import { collectOnlyVenues } from "../index/config.js";
 import { quotesBetween, type Sql } from "../index/db.js";
+import { publishable } from "../index/gate.js";
 import { freshness, type HourRange } from "./verify-facts.js";
 
 /** The supplier's alternative: JustLend's daily rate net of its reserve (src/collectors/justlend.ts). */
@@ -134,11 +136,12 @@ export const BAND_PASS_CONDITION = `in >= 12 of the latest 24 hours, the cheapes
  * The latest 24 hours in it that have a justlend-net rate are judged by bandPass; the term premium is over every hour in it.
  * `spanHours` is the span of the hours judged (newest judged hour - oldest judged hour + 1; null when none is), not of the
  * window: a wider range whose latest 24 net hours are all present is `complete`, and judged hours spanning more than 24
- * (gaps in the net series) never are.
+ * (gaps in the net series) never are. Collect-only venues (src/index/gate.ts; PUBLISH_<VENUE> not `on`) are left out:
+ * the fact goes into a public decision record.
  */
-export async function bandFact(sql: Sql, range: HourRange | null, now: Date = new Date()) {
+export async function bandFact(sql: Sql, range: HourRange | null, now: Date = new Date(), collectOnly: ReadonlySet<string> = collectOnlyVenues(process.env)) {
   const window = range ?? (await defaultBandWindow(sql));
-  const quotes = window ? await quotesBetween(sql, window.from, window.to) : [];
+  const quotes = window ? publishable(await quotesBetween(sql, window.from, window.to), collectOnly) : [];
   const hours = assembleBandHours(quotes).slice(-BAND_WINDOW_HOURS);
   const band = bandPass(hours);
   const first = hours[0];

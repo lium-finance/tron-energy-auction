@@ -1,0 +1,1 @@
+{"success":false,"action":"utils","type":"list_details","txnhash":"","filltxnhash":"","freezetxnhash":"","contact":false,"errormessage":"INVALID_REQUEST","inputparams":{"action":"utils","type":"list_details","rval":1,"sortkey":"payoutamountinsun","limit":5,"offset":0}}

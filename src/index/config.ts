@@ -1,3 +1,5 @@
+import type { VenueAdapter } from "../collectors/adapter.js";
+import { VENUES } from "../collectors/index.js";
 import { VERIFY_RPS_DEFAULT } from "../collectors/pace.js";
 
 export interface Config {
@@ -16,6 +18,8 @@ export interface Config {
    * when the reads are wired, not here, so a bad value disables only the verification reads and never stops the index.
    */
   verifyRps: string | null;
+  /** Venues collected and stored but never counted or published: each gated venue whose PUBLISH_<VENUE> is not `on` (collectOnlyVenues). */
+  collectOnly: ReadonlySet<string>;
 }
 
 export class ConfigError extends Error {
@@ -56,6 +60,23 @@ export function requireEnv(env: NodeJS.ProcessEnv, name: string): string {
   return v;
 }
 
+/**
+ * The collect-only venues: every venue with a `publishGate` whose variable is not `on`. Their quotes are collected and
+ * stored, but never counted in a print, written to the public files, or used in a decision record. Unset, blank or `off`
+ * keeps a venue collect-only; any other value is a ConfigError naming the variable, like PUBLISH. So a missing variable
+ * can never publish.
+ */
+export function collectOnlyVenues(env: NodeJS.ProcessEnv, venues: readonly VenueAdapter[] = VENUES): ReadonlySet<string> {
+  const out = new Set<string>();
+  for (const v of venues) {
+    if (!v.publishGate) continue;
+    const raw = envValue(env, v.publishGate);
+    if (raw !== undefined && raw !== "on" && raw !== "off") throw new ConfigError(`${v.publishGate} must be on or off`);
+    if (raw !== "on") out.add(v.venue);
+  }
+  return out;
+}
+
 /** Port the server listens on when PORT is unset. */
 const DEFAULT_PORT = 3000;
 
@@ -88,5 +109,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     nettsApiKey: get("NETTS_API_KEY") ?? null,
     verifyWalletsFile: get("VERIFY_WALLETS_FILE") ?? null,
     verifyRps: get("VERIFY_RPS") ?? null,
+    collectOnly: collectOnlyVenues(env),
   };
 }
