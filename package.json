@@ -46,7 +46,7 @@
     "nile-probe": "tsx src/scripts/nile-probe.ts"
   },
   "dependencies": {
-    "postgres": "3.4.9",
+    "postgres": "4.1.0",
     "tronweb": "6.5.1"
   },
   "devDependencies": {
