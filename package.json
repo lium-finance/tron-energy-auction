@@ -47,7 +47,7 @@
   },
   "dependencies": {
     "postgres": "3.4.9",
-    "tronweb": "6.5.1"
+    "tronweb": "6.5.2"
   },
   "devDependencies": {
     "@types/node": "24.13.5",
